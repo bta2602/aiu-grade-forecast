@@ -1,0 +1,8 @@
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+catboost_info/
+datasets/public_kz/
+datasets/aiu_platonus/
+.streamlit/secrets.toml

@@ -1,0 +1,815 @@
+{
+  "n_students": 33,
+  "n_splits": 5,
+  "seed": 42,
+  "target": "FG",
+  "target_range": [
+    51.0,
+    96.0
+  ],
+  "available_components": [
+    "lecture",
+    "lab",
+    "self_work"
+  ],
+  "horizons": [
+    {
+      "week": 3,
+      "n_evaluated": 33,
+      "features": [
+        "lecture",
+        "lab",
+        "self_work",
+        "zero_share"
+      ],
+      "baseline_rule": "Среднее по имеющимся оценкам с весами курса 20%, 50% и 30%",
+      "predictor": {
+        "features": [
+          "lecture",
+          "lab",
+          "self_work",
+          "zero_share"
+        ],
+        "medians": [
+          87.5,
+          90.0,
+          70.0,
+          0.0
+        ],
+        "centers": [
+          80.9090909090909,
+          78.87878787878788,
+          71.72727272727273,
+          0.06060606060606061
+        ],
+        "scales": [
+          19.265078527966224,
+          26.306765549612464,
+          19.413011455570327,
+          0.17440703686699
+        ],
+        "weights": [
+          1.5818922883724906,
+          2.855606174182159,
+          5.613115113993109,
+          0.7157563203610345
+        ],
+        "intercept": 78.63636363636364
+      },
+      "models": [
+        {
+          "model": "baseline",
+          "n": 33,
+          "mae": 7.5939,
+          "rmse": 12.8768,
+          "bias": -1.497
+        },
+        {
+          "model": "ridge",
+          "n": 33,
+          "mae": 5.5851,
+          "rmse": 7.4906,
+          "bias": -0.2911
+        }
+      ],
+      "predictions": [
+        {
+          "student_id": 1,
+          "predicted": 70.866,
+          "baseline": 66.0,
+          "actual": 75.0
+        },
+        {
+          "student_id": 2,
+          "predicted": 86.514,
+          "baseline": 94.5,
+          "actual": 84.0
+        },
+        {
+          "student_id": 3,
+          "predicted": 77.086,
+          "baseline": 75.0,
+          "actual": 55.0
+        },
+        {
+          "student_id": 4,
+          "predicted": 84.844,
+          "baseline": 89.0,
+          "actual": 84.0
+        },
+        {
+          "student_id": 5,
+          "predicted": 73.773,
+          "baseline": 67.0,
+          "actual": 71.0
+        },
+        {
+          "student_id": 6,
+          "predicted": 85.398,
+          "baseline": 89.5,
+          "actual": 91.0
+        },
+        {
+          "student_id": 7,
+          "predicted": 78.074,
+          "baseline": 72.5,
+          "actual": 75.0
+        },
+        {
+          "student_id": 8,
+          "predicted": 77.255,
+          "baseline": 80.0,
+          "actual": 73.0
+        },
+        {
+          "student_id": 9,
+          "predicted": 87.046,
+          "baseline": 91.5,
+          "actual": 93.0
+        },
+        {
+          "student_id": 10,
+          "predicted": 84.937,
+          "baseline": 90.4,
+          "actual": 88.0
+        },
+        {
+          "student_id": 11,
+          "predicted": 76.416,
+          "baseline": 79.0,
+          "actual": 81.0
+        },
+        {
+          "student_id": 12,
+          "predicted": 86.615,
+          "baseline": 91.0,
+          "actual": 93.0
+        },
+        {
+          "student_id": 13,
+          "predicted": 81.295,
+          "baseline": 84.5,
+          "actual": 73.0
+        },
+        {
+          "student_id": 14,
+          "predicted": 76.128,
+          "baseline": 71.0,
+          "actual": 71.0
+        },
+        {
+          "student_id": 15,
+          "predicted": 75.771,
+          "baseline": 74.0,
+          "actual": 78.0
+        },
+        {
+          "student_id": 16,
+          "predicted": 85.694,
+          "baseline": 92.0,
+          "actual": 90.0
+        },
+        {
+          "student_id": 17,
+          "predicted": 85.104,
+          "baseline": 89.0,
+          "actual": 85.0
+        },
+        {
+          "student_id": 18,
+          "predicted": 44.757,
+          "baseline": 9.0,
+          "actual": 51.0
+        },
+        {
+          "student_id": 19,
+          "predicted": 73.131,
+          "baseline": 34.0,
+          "actual": 52.0
+        },
+        {
+          "student_id": 20,
+          "predicted": 74.325,
+          "baseline": 77.0,
+          "actual": 75.0
+        },
+        {
+          "student_id": 21,
+          "predicted": 77.789,
+          "baseline": 83.5,
+          "actual": 72.0
+        },
+        {
+          "student_id": 22,
+          "predicted": 76.509,
+          "baseline": 77.0,
+          "actual": 71.0
+        },
+        {
+          "student_id": 23,
+          "predicted": 81.215,
+          "baseline": 86.5,
+          "actual": 87.0
+        },
+        {
+          "student_id": 24,
+          "predicted": 82.661,
+          "baseline": 88.0,
+          "actual": 83.0
+        },
+        {
+          "student_id": 25,
+          "predicted": 62.012,
+          "baseline": 28.5,
+          "actual": 74.0
+        },
+        {
+          "student_id": 26,
+          "predicted": 73.882,
+          "baseline": 75.0,
+          "actual": 76.0
+        },
+        {
+          "student_id": 27,
+          "predicted": 83.618,
+          "baseline": 88.5,
+          "actual": 93.0
+        },
+        {
+          "student_id": 28,
+          "predicted": 86.922,
+          "baseline": 93.5,
+          "actual": 95.0
+        },
+        {
+          "student_id": 29,
+          "predicted": 72.88,
+          "baseline": 70.5,
+          "actual": 73.0
+        },
+        {
+          "student_id": 30,
+          "predicted": 86.503,
+          "baseline": 94.7,
+          "actual": 82.0
+        },
+        {
+          "student_id": 31,
+          "predicted": 85.436,
+          "baseline": 95.0,
+          "actual": 96.0
+        },
+        {
+          "student_id": 32,
+          "predicted": 69.591,
+          "baseline": 68.0,
+          "actual": 75.0
+        },
+        {
+          "student_id": 33,
+          "predicted": 81.345,
+          "baseline": 81.0,
+          "actual": 80.0
+        }
+      ]
+    },
+    {
+      "week": 7,
+      "n_evaluated": 33,
+      "features": [
+        "lecture",
+        "lab",
+        "self_work",
+        "zero_share",
+        "mc1"
+      ],
+      "baseline_rule": "Первый рейтинг дисциплины",
+      "predictor": {
+        "features": [
+          "lecture",
+          "lab",
+          "self_work",
+          "zero_share",
+          "mc1"
+        ],
+        "medians": [
+          84.0,
+          85.0,
+          75.0,
+          0.0,
+          83.0
+        ],
+        "centers": [
+          79.42424242424242,
+          75.38383838383838,
+          73.5959595959596,
+          0.06611570247933884,
+          78.9090909090909
+        ],
+        "scales": [
+          15.525209807844599,
+          21.867849378602838,
+          17.062917354845865,
+          0.13291832597041123,
+          13.798031560013532
+        ],
+        "weights": [
+          0.6118863332258453,
+          4.018463683676187,
+          2.816475009472404,
+          -0.9713546868884145,
+          2.602201272405507
+        ],
+        "intercept": 78.63636363636364
+      },
+      "models": [
+        {
+          "model": "baseline",
+          "n": 33,
+          "mae": 4.4176,
+          "rmse": 6.4347,
+          "bias": -1.3545
+        },
+        {
+          "model": "ridge",
+          "n": 33,
+          "mae": 4.1952,
+          "rmse": 5.2902,
+          "bias": -0.029
+        }
+      ],
+      "predictions": [
+        {
+          "student_id": 1,
+          "predicted": 74.789,
+          "baseline": 70.12,
+          "actual": 75.0
+        },
+        {
+          "student_id": 2,
+          "predicted": 87.088,
+          "baseline": 90.4,
+          "actual": 84.0
+        },
+        {
+          "student_id": 3,
+          "predicted": 67.102,
+          "baseline": 54.07,
+          "actual": 55.0
+        },
+        {
+          "student_id": 4,
+          "predicted": 82.975,
+          "baseline": 83.9,
+          "actual": 84.0
+        },
+        {
+          "student_id": 5,
+          "predicted": 71.453,
+          "baseline": 61.35,
+          "actual": 71.0
+        },
+        {
+          "student_id": 6,
+          "predicted": 88.168,
+          "baseline": 91.4,
+          "actual": 91.0
+        },
+        {
+          "student_id": 7,
+          "predicted": 76.85,
+          "baseline": 74.23,
+          "actual": 75.0
+        },
+        {
+          "student_id": 8,
+          "predicted": 72.785,
+          "baseline": 70.73,
+          "actual": 73.0
+        },
+        {
+          "student_id": 9,
+          "predicted": 87.997,
+          "baseline": 93.13,
+          "actual": 93.0
+        },
+        {
+          "student_id": 10,
+          "predicted": 85.997,
+          "baseline": 91.03,
+          "actual": 88.0
+        },
+        {
+          "student_id": 11,
+          "predicted": 77.695,
+          "baseline": 73.23,
+          "actual": 81.0
+        },
+        {
+          "student_id": 12,
+          "predicted": 88.884,
+          "baseline": 92.75,
+          "actual": 93.0
+        },
+        {
+          "student_id": 13,
+          "predicted": 81.48,
+          "baseline": 78.35,
+          "actual": 73.0
+        },
+        {
+          "student_id": 14,
+          "predicted": 77.343,
+          "baseline": 74.57,
+          "actual": 71.0
+        },
+        {
+          "student_id": 15,
+          "predicted": 82.027,
+          "baseline": 86.03,
+          "actual": 78.0
+        },
+        {
+          "student_id": 16,
+          "predicted": 84.827,
+          "baseline": 88.23,
+          "actual": 90.0
+        },
+        {
+          "student_id": 17,
+          "predicted": 84.964,
+          "baseline": 86.12,
+          "actual": 85.0
+        },
+        {
+          "student_id": 18,
+          "predicted": 53.921,
+          "baseline": 50.47,
+          "actual": 51.0
+        },
+        {
+          "student_id": 19,
+          "predicted": 63.745,
+          "baseline": 51.17,
+          "actual": 52.0
+        },
+        {
+          "student_id": 20,
+          "predicted": 69.991,
+          "baseline": 63.78,
+          "actual": 75.0
+        },
+        {
+          "student_id": 21,
+          "predicted": 74.242,
+          "baseline": 71.27,
+          "actual": 72.0
+        },
+        {
+          "student_id": 22,
+          "predicted": 62.392,
+          "baseline": 51.13,
+          "actual": 71.0
+        },
+        {
+          "student_id": 23,
+          "predicted": 83.331,
+          "baseline": 85.25,
+          "actual": 87.0
+        },
+        {
+          "student_id": 24,
+          "predicted": 74.946,
+          "baseline": 73.67,
+          "actual": 83.0
+        },
+        {
+          "student_id": 25,
+          "predicted": 73.381,
+          "baseline": 68.98,
+          "actual": 74.0
+        },
+        {
+          "student_id": 26,
+          "predicted": 72.681,
+          "baseline": 63.8,
+          "actual": 76.0
+        },
+        {
+          "student_id": 27,
+          "predicted": 87.375,
+          "baseline": 92.13,
+          "actual": 93.0
+        },
+        {
+          "student_id": 28,
+          "predicted": 90.142,
+          "baseline": 95.58,
+          "actual": 95.0
+        },
+        {
+          "student_id": 29,
+          "predicted": 80.7,
+          "baseline": 79.23,
+          "actual": 73.0
+        },
+        {
+          "student_id": 30,
+          "predicted": 89.505,
+          "baseline": 95.1,
+          "actual": 82.0
+        },
+        {
+          "student_id": 31,
+          "predicted": 90.421,
+          "baseline": 98.6,
+          "actual": 96.0
+        },
+        {
+          "student_id": 32,
+          "predicted": 74.561,
+          "baseline": 74.63,
+          "actual": 75.0
+        },
+        {
+          "student_id": 33,
+          "predicted": 80.284,
+          "baseline": 75.87,
+          "actual": 80.0
+        }
+      ]
+    },
+    {
+      "week": 15,
+      "n_evaluated": 33,
+      "features": [
+        "lecture",
+        "lab",
+        "self_work",
+        "zero_share",
+        "mc1",
+        "mc2"
+      ],
+      "baseline_rule": "Среднее первого и второго рейтингов",
+      "predictor": {
+        "features": [
+          "lecture",
+          "lab",
+          "self_work",
+          "zero_share",
+          "mc1",
+          "mc2"
+        ],
+        "medians": [
+          86.0,
+          74.36363636363636,
+          75.0,
+          0.03571428571428571,
+          83.0,
+          83.0
+        ],
+        "centers": [
+          83.5909090909091,
+          71.07162534435263,
+          75.42424242424242,
+          0.05411255411255411,
+          78.9090909090909,
+          80.27272727272727
+        ],
+        "scales": [
+          10.322830350552167,
+          20.173797298932868,
+          12.0009010612273,
+          0.0862004664577484,
+          13.798031560013532,
+          9.551369019032876
+        ],
+        "weights": [
+          0.7181724068356096,
+          3.743105010640143,
+          2.256234450925795,
+          -1.1241487939909698,
+          2.0871009281419175,
+          2.073655098418818
+        ],
+        "intercept": 78.63636363636364
+      },
+      "models": [
+        {
+          "model": "baseline",
+          "n": 33,
+          "mae": 2.8202,
+          "rmse": 3.7309,
+          "bias": -1.0983
+        },
+        {
+          "model": "ridge",
+          "n": 33,
+          "mae": 3.2583,
+          "rmse": 4.0151,
+          "bias": -0.0878
+        }
+      ],
+      "predictions": [
+        {
+          "student_id": 1,
+          "predicted": 75.977,
+          "baseline": 76.32,
+          "actual": 75.0
+        },
+        {
+          "student_id": 2,
+          "predicted": 85.122,
+          "baseline": 87.405,
+          "actual": 84.0
+        },
+        {
+          "student_id": 3,
+          "predicted": 65.799,
+          "baseline": 57.94,
+          "actual": 55.0
+        },
+        {
+          "student_id": 4,
+          "predicted": 80.072,
+          "baseline": 79.94,
+          "actual": 84.0
+        },
+        {
+          "student_id": 5,
+          "predicted": 68.123,
+          "baseline": 65.91,
+          "actual": 71.0
+        },
+        {
+          "student_id": 6,
+          "predicted": 90.972,
+          "baseline": 91.185,
+          "actual": 91.0
+        },
+        {
+          "student_id": 7,
+          "predicted": 68.805,
+          "baseline": 68.405,
+          "actual": 75.0
+        },
+        {
+          "student_id": 8,
+          "predicted": 76.091,
+          "baseline": 72.515,
+          "actual": 73.0
+        },
+        {
+          "student_id": 9,
+          "predicted": 91.367,
+          "baseline": 92.175,
+          "actual": 93.0
+        },
+        {
+          "student_id": 10,
+          "predicted": 86.271,
+          "baseline": 87.095,
+          "actual": 88.0
+        },
+        {
+          "student_id": 11,
+          "predicted": 79.746,
+          "baseline": 77.24,
+          "actual": 81.0
+        },
+        {
+          "student_id": 12,
+          "predicted": 90.945,
+          "baseline": 92.07,
+          "actual": 93.0
+        },
+        {
+          "student_id": 13,
+          "predicted": 79.746,
+          "baseline": 77.705,
+          "actual": 73.0
+        },
+        {
+          "student_id": 14,
+          "predicted": 71.15,
+          "baseline": 71.425,
+          "actual": 71.0
+        },
+        {
+          "student_id": 15,
+          "predicted": 83.578,
+          "baseline": 82.555,
+          "actual": 78.0
+        },
+        {
+          "student_id": 16,
+          "predicted": 86.249,
+          "baseline": 87.21,
+          "actual": 90.0
+        },
+        {
+          "student_id": 17,
+          "predicted": 82.107,
+          "baseline": 81.2,
+          "actual": 85.0
+        },
+        {
+          "student_id": 18,
+          "predicted": 48.729,
+          "baseline": 50.59,
+          "actual": 51.0
+        },
+        {
+          "student_id": 19,
+          "predicted": 60.174,
+          "baseline": 53.705,
+          "actual": 52.0
+        },
+        {
+          "student_id": 20,
+          "predicted": 71.459,
+          "baseline": 67.255,
+          "actual": 75.0
+        },
+        {
+          "student_id": 21,
+          "predicted": 75.681,
+          "baseline": 72.355,
+          "actual": 72.0
+        },
+        {
+          "student_id": 22,
+          "predicted": 65.696,
+          "baseline": 61.965,
+          "actual": 71.0
+        },
+        {
+          "student_id": 23,
+          "predicted": 84.313,
+          "baseline": 84.855,
+          "actual": 87.0
+        },
+        {
+          "student_id": 24,
+          "predicted": 79.069,
+          "baseline": 78.955,
+          "actual": 83.0
+        },
+        {
+          "student_id": 25,
+          "predicted": 77.161,
+          "baseline": 73.545,
+          "actual": 74.0
+        },
+        {
+          "student_id": 26,
+          "predicted": 73.961,
+          "baseline": 68.365,
+          "actual": 76.0
+        },
+        {
+          "student_id": 27,
+          "predicted": 90.016,
+          "baseline": 91.19,
+          "actual": 93.0
+        },
+        {
+          "student_id": 28,
+          "predicted": 92.069,
+          "baseline": 93.99,
+          "actual": 95.0
+        },
+        {
+          "student_id": 29,
+          "predicted": 79.185,
+          "baseline": 78.285,
+          "actual": 73.0
+        },
+        {
+          "student_id": 30,
+          "predicted": 82.86,
+          "baseline": 85.53,
+          "actual": 82.0
+        },
+        {
+          "student_id": 31,
+          "predicted": 93.139,
+          "baseline": 95.61,
+          "actual": 96.0
+        },
+        {
+          "student_id": 32,
+          "predicted": 74.681,
+          "baseline": 74.735,
+          "actual": 75.0
+        },
+        {
+          "student_id": 33,
+          "predicted": 81.791,
+          "baseline": 79.53,
+          "actual": 80.0
+        }
+      ]
+    }
+  ]
+}
