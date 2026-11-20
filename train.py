@@ -13,6 +13,7 @@ from catboost import CatBoostRegressor, Pool
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_absolute_error, r2_score, root_mean_squared_error
 
+from grade_forecast.history import previous_average
 from grade_forecast.model import DEFAULT_ARTIFACTS, FEATURES, ROOT, formula_grade, score_matrix
 from grade_forecast.report_plot import save_test_plot
 
@@ -51,6 +52,7 @@ def load_data(data_dir):
         if seen_students & students:
             raise ValueError("У исходных train/val/test есть общие студенты")
         seen_students.update(students)
+        clean = clean.assign(prior_average=previous_average(clean))
         current = clean.loc[clean["semester"].isin(semesters)].reset_index(drop=True)
         if current.empty or sorted(current["semester"].unique()) != semesters:
             raise ValueError(f"Отсутствует ожидаемый семестр: {file.name}")
@@ -96,6 +98,96 @@ def predict_scored(model, x):
     return np.clip(score_matrix(model, x), 0, 100)
 
 
+def predict_targets(model, stage, data, features):
+    native = predict_scored(model, data[features].to_numpy(dtype=float))
+    final = native if stage == "early" else formula_grade(data.r1.to_numpy(), data.r2.to_numpy(), native)
+    return native, final
+
+
+def paired_final_comparison(data, reference, candidate, alpha=0.025):
+    """Resample whole students, retaining all their courses, for paired MAE differences."""
+    actual = data.final.to_numpy()
+    errors = np.abs(actual - reference) - np.abs(actual - candidate)
+    _, student = np.unique(data.student, return_inverse=True)
+    totals = np.bincount(student, weights=errors)
+    counts = np.bincount(student)
+    sample = np.random.default_rng(SEED).integers(len(counts), size=(4000, len(counts)))
+    improvement = totals[sample].sum(axis=1) / counts[sample].sum(axis=1)
+    return {
+        "students": len(counts), "rows": len(data),
+        "reference_mae": float(np.abs(actual - reference).mean()),
+        "candidate_mae": float(np.abs(actual - candidate).mean()),
+        "mae_gain": float(errors.mean()), "ci_level": 1 - 2 * alpha,
+        "gain_interval": np.quantile(improvement, [alpha, 1 - alpha]).tolist(),
+    }
+
+
+def load_external(path):
+    if path is None:
+        return {}
+    frame = pd.read_csv(path, usecols=["source", *GRADES])
+    if frame.empty or frame.source.isna().any():
+        raise ValueError("Each external row must name a source")
+    for key in GRADES:
+        values = pd.to_numeric(frame[key], errors="raise")
+        if not values.dropna().between(0, 100).all():
+            raise ValueError(f"External grades outside 0-100: {key}")
+        frame[key] = values
+    return {source: rows for source, rows in frame.groupby("source")}
+
+
+def select_extensions(stage, selection, train, val, external):
+    features = FEATURES[stage]
+    target = "final" if stage == "early" else "exam"
+    original = selection["models"][selection["winner"]]
+    config = selection["models"]["catboost"]["parameters"]
+    _, reference = predict_targets(original, stage, val, features)
+    report = {"transfer": {}, "selected_external_source": None}
+    compatible = {source: rows.dropna(subset=[*features, target]) for source, rows in external.items()}
+    trials = sum(not rows.empty for rows in compatible.values())
+    best_gain = 0
+    rating_model = original
+    for source, extra in compatible.items():
+        if extra.empty:
+            report["transfer"][source] = {"training_rows_added": 0, "reason": f"missing {target} or ratings"}
+            continue
+        pooled = pd.concat([train, extra], ignore_index=True)
+        candidate = fit_model("catboost", pooled[features].to_numpy(), pooled[target].to_numpy(), config)
+        native, final = predict_targets(candidate, stage, val, features)
+        # Bonferroni-adjust the paired bootstrap interval for the sources tried on this stage.
+        comparison = paired_final_comparison(val, reference, final, alpha=0.025 / trials)
+        comparison["training_rows_added"] = len(extra)
+        comparison["native_validation_mae"] = float(mean_absolute_error(val[target], native))
+        report["transfer"][source] = comparison
+        if comparison["gain_interval"][0] > 0 and comparison["mae_gain"] > best_gain:
+            best_gain, rating_model = comparison["mae_gain"], candidate
+            report["selected_external_source"] = source
+    if report["selected_external_source"] is not None:
+        selection["models"]["catboost"] = rating_model
+        selection["winner"] = "catboost"
+        pred, _ = predict_targets(rating_model, stage, val, features)
+        selection["validation"]["catboost"] = metrics(val[target], pred)
+
+    # Keep the no-history model available for unobserved history and new students.
+    history_features = [*features, "prior_average"]
+    history_train = train.dropna(subset=["prior_average"])
+    history_val = val.dropna(subset=["prior_average"])
+    if history_train.empty or history_val.empty:
+        report["history"] = {"selected": False, "training_rows": len(history_train), "rows": len(history_val)}
+        return None, report
+    history_model = fit_model(
+        "catboost", history_train[history_features].to_numpy(), history_train[target].to_numpy(), config,
+    )
+    _, reference = predict_targets(rating_model, stage, history_val, features)
+    native, final = predict_targets(history_model, stage, history_val, history_features)
+    history = paired_final_comparison(history_val, reference, final)
+    history["selected"] = history["gain_interval"][0] > 0
+    history["training_rows"] = len(history_train)
+    history["native_validation_mae"] = float(mean_absolute_error(history_val[target], native))
+    report["history"] = history
+    return history_model if history["selected"] else None, report
+
+
 def grade_bands(actual, predicted):
     bands = []
     for low, high in [(0, 50), (50, 70), (70, 90), (90, 101)]:
@@ -131,29 +223,38 @@ def direct_final_benchmark(x, data):
     }
 
 
-def train_stage(stage, data):
+def select_stage(stage, train, val):
     feature_names = FEATURES[stage]
     target = "final" if stage == "early" else "exam"
-    x = {key: df[feature_names].to_numpy(dtype=float) for key, df in data.items()}
-    y = {key: df[target].to_numpy(dtype=float) for key, df in data.items()}
+    x_train, x_val = train[feature_names].to_numpy(dtype=float), val[feature_names].to_numpy(dtype=float)
+    y_train, y_val = train[target].to_numpy(dtype=float), val[target].to_numpy(dtype=float)
     fitted = {
-        "baseline": fit_model("baseline", x["train"], y["train"]),
-        "linear": fit_model("linear", x["train"], y["train"]),
+        "baseline": fit_model("baseline", x_train, y_train),
+        "linear": fit_model("linear", x_train, y_train),
     }
     tuning = []
     cats = []
     for config in CAT_CONFIGS:
-        cat = fit_model("catboost", x["train"], y["train"], config)
-        validation_mae = mean_absolute_error(y["validation"], predict_scored(cat, x["validation"]))
+        cat = fit_model("catboost", x_train, y_train, config)
+        validation_mae = mean_absolute_error(y_val, predict_scored(cat, x_val))
         cats.append(cat)
         tuning.append({"parameters": config, "validation_mae": float(validation_mae)})
     fitted["catboost"] = cats[min(range(len(cats)), key=lambda i: tuning[i]["validation_mae"])]
     validation = {
-        name: metrics(y["validation"], predict_scored(model, x["validation"]))
+        name: metrics(y_val, predict_scored(model, x_val))
         for name, model in fitted.items()
     }
     winner = min(validation, key=lambda name: validation[name]["mae"])
-    # Keep the very model selected on validation; all three get one final holdout evaluation.
+    return {"models": fitted, "winner": winner, "validation": validation, "tuning": tuning}
+
+
+def evaluate_stage(stage, data, selection):
+    feature_names = FEATURES[stage]
+    target = "final" if stage == "early" else "exam"
+    x = {key: df[feature_names].to_numpy(dtype=float) for key, df in data.items()}
+    y = {key: df[target].to_numpy(dtype=float) for key, df in data.items()}
+    fitted, winner = selection["models"], selection["winner"]
+    validation, tuning = selection["validation"], selection["tuning"]
     test = data["test"]
     final = test["final"].to_numpy()
     summary = []
@@ -242,14 +343,43 @@ def export_model(model):
         return {"name": "catboost", "parameters": model["parameters"], "cbm": base64.b64encode(cbm.read_bytes()).decode("ascii")}
 
 
-def train(data_dir=PUBLIC, artifacts=DEFAULT_ARTIFACTS):
+def train(data_dir=PUBLIC, artifacts=DEFAULT_ARTIFACTS, external_path=None):
     data, splits, audit = load_data(Path(data_dir))
-    bundle = {"version": 1, "stages": {}}
-    report = {"version": 1, "seed": SEED, "split": splits, "cleaning": audit, "eda": describe(data), "stages": {}}
+    external = load_external(external_path)
+    bundle = {"version": 1, "stages": {}, "history_stages": {}}
+    report = {"version": 1, "seed": SEED, "split": splits, "cleaning": audit, "stages": {}, "extensions": {}}
+    selections, histories = {}, {}
     for stage in FEATURES:
-        selected, stage_report = train_stage(stage, data)
+        selection = select_stage(stage, data["train"], data["validation"])
+        histories[stage], experiment = select_extensions(stage, selection, data["train"], data["validation"], external)
+        selections[stage] = selection
+        report["extensions"][stage] = experiment
+
+    # All training and model selection have finished before any test metrics are calculated.
+    report["eda"] = describe(data)
+    for stage in FEATURES:
+        selected, stage_report = evaluate_stage(stage, data, selections[stage])
         bundle["stages"][stage] = export_model(selected)
         report["stages"][stage] = stage_report
+        if histories[stage] is not None:
+            history_model = histories[stage]
+            bundle["history_stages"][stage] = export_model(history_model)
+            rows = data["test"].dropna(subset=["prior_average"])
+            if not rows.empty:
+                native, final = predict_targets(history_model, stage, rows, [*FEATURES[stage], "prior_average"])
+                _, ref = predict_targets(selected, stage, rows, FEATURES[stage])
+                target = "final" if stage == "early" else "exam"
+                comparison = paired_final_comparison(rows, ref, final)
+                comparison["native_test"] = metrics(rows[target], native)
+                comparison["within_5"] = int((np.abs(rows.final - final) <= 5).sum())
+                comparison["final_bands"] = grade_bands(rows.final.to_numpy(), final)
+                if stage == "late":
+                    eligible = ((rows.r1 + rows.r2) / 2 >= 50) & (native >= 50)
+                    comparison["displayed_final_test"] = {
+                        "rows": int(eligible.sum()), "total_rows": len(rows),
+                        "mae": float(mean_absolute_error(rows.final[eligible], final[eligible])) if eligible.any() else None,
+                    }
+                report["extensions"][stage]["history"]["test"] = comparison
         result = next(r for r in stage_report["models"] if r["name"] == stage_report["winner"])
         print(f"{stage}: {stage_report['winner']}, test MAE={result['test']['mae']:.3f}, final MAE={result['final_test']['mae']:.3f}", flush=True)
     write_json(Path(artifacts) / "forecast.json", bundle)
@@ -262,5 +392,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--data-dir", type=Path, default=PUBLIC)
     parser.add_argument("--artifacts", type=Path, default=DEFAULT_ARTIFACTS)
+    parser.add_argument("--external", type=Path, help="Normalized external training sources (optional CSV)")
     options = parser.parse_args()
-    train(options.data_dir, options.artifacts)
+    train(options.data_dir, options.artifacts, options.external)

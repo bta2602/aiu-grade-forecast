@@ -46,77 +46,6 @@
       "other_semesters_excluded": 9380
     }
   },
-  "eda": {
-    "basis": "train",
-    "histogram": [
-      {
-        "label": "0–9",
-        "count": 138
-      },
-      {
-        "label": "10–19",
-        "count": 0
-      },
-      {
-        "label": "20–29",
-        "count": 0
-      },
-      {
-        "label": "30–39",
-        "count": 0
-      },
-      {
-        "label": "40–49",
-        "count": 0
-      },
-      {
-        "label": "50–59",
-        "count": 705
-      },
-      {
-        "label": "60–69",
-        "count": 1553
-      },
-      {
-        "label": "70–79",
-        "count": 6145
-      },
-      {
-        "label": "80–89",
-        "count": 9881
-      },
-      {
-        "label": "90–100",
-        "count": 15467
-      }
-    ],
-    "target_stats": {
-      "count": 33889.0,
-      "mean": 85.1047832630057,
-      "std": 11.300895933391311,
-      "min": 0.0,
-      "25%": 79.0,
-      "50%": 88.0,
-      "75%": 93.0,
-      "max": 100.0
-    },
-    "correlations_with_final": {
-      "r1": 0.7422553476268893,
-      "r2": 0.7703521686154604,
-      "exam": 0.897427524328131
-    },
-    "below_50": {
-      "train": 138,
-      "validation": 3,
-      "test": 7
-    },
-    "midterms_vs_rating": {
-      "rows": 33889,
-      "within_one_point": 19890,
-      "fraction_within_one_point": 0.5869161084717756,
-      "mean_absolute_difference": 1.924513411431438
-    }
-  },
   "stages": {
     "early": {
       "target": "final",
@@ -570,6 +499,260 @@
           }
         ]
       }
+    }
+  },
+  "extensions": {
+    "early": {
+      "transfer": {
+        "openintro_statistics": {
+          "students": 363,
+          "rows": 2137,
+          "reference_mae": 3.9178060531479506,
+          "candidate_mae": 3.9137838050927716,
+          "mae_gain": 0.00402224805518086,
+          "ci_level": 0.975,
+          "gain_interval": [
+            -0.013446983308674356,
+            0.02148156570979664
+          ],
+          "training_rows_added": 232,
+          "native_validation_mae": 3.9137838050927716
+        },
+        "uci_portugal": {
+          "students": 363,
+          "rows": 2137,
+          "reference_mae": 3.9178060531479506,
+          "candidate_mae": 3.9747628908950294,
+          "mae_gain": -0.05695683774707709,
+          "ci_level": 0.975,
+          "gain_interval": [
+            -0.11220604753934615,
+            -0.006983860308568823
+          ],
+          "training_rows_added": 1044,
+          "native_validation_mae": 3.9747628908950294
+        }
+      },
+      "selected_external_source": null,
+      "history": {
+        "students": 363,
+        "rows": 2137,
+        "reference_mae": 3.9178060531479506,
+        "candidate_mae": 3.5817272785028753,
+        "mae_gain": 0.3360787746450769,
+        "ci_level": 0.95,
+        "gain_interval": [
+          0.25089403311551567,
+          0.4172467203996235
+        ],
+        "selected": true,
+        "training_rows": 21896,
+        "native_validation_mae": 3.5817272785028753,
+        "test": {
+          "students": 364,
+          "rows": 2212,
+          "reference_mae": 4.561085976674401,
+          "candidate_mae": 4.17829336577879,
+          "mae_gain": 0.38279261089561084,
+          "ci_level": 0.95,
+          "gain_interval": [
+            0.2920546522609344,
+            0.4722393257877791
+          ],
+          "native_test": {
+            "mae": 4.17829336577879,
+            "rmse": 6.6642923332181505,
+            "bias": 2.5048834611628865,
+            "r2": 0.6830663054458774
+          },
+          "within_5": 1557,
+          "final_bands": [
+            {
+              "label": "0–49",
+              "count": 7,
+              "mae": 66.76823396954627,
+              "bias": 66.76823396954627
+            },
+            {
+              "label": "50–69",
+              "count": 321,
+              "mae": 7.118692998982258,
+              "bias": 6.047474711449891
+            },
+            {
+              "label": "70–89",
+              "count": 1084,
+              "mae": 4.535337476728059,
+              "bias": 2.533980753928347
+            },
+            {
+              "label": "90–100",
+              "count": 800,
+              "mae": 1.9670012623366733,
+              "bias": 0.48168757333967277
+            }
+          ]
+        }
+      }
+    },
+    "late": {
+      "transfer": {
+        "openintro_statistics": {
+          "students": 363,
+          "rows": 2137,
+          "reference_mae": 2.8632844729096134,
+          "candidate_mae": 2.8624796076377574,
+          "mae_gain": 0.0008048652718560485,
+          "ci_level": 0.95,
+          "gain_interval": [
+            -0.0064230912314553945,
+            0.008195469138154153
+          ],
+          "training_rows_added": 232,
+          "native_validation_mae": 5.085696722601709
+        },
+        "uci_portugal": {
+          "training_rows_added": 0,
+          "reason": "missing exam or ratings"
+        }
+      },
+      "selected_external_source": null,
+      "history": {
+        "students": 363,
+        "rows": 2137,
+        "reference_mae": 2.8632844729096134,
+        "candidate_mae": 2.812288738413878,
+        "mae_gain": 0.050995734495735,
+        "ci_level": 0.95,
+        "gain_interval": [
+          0.026636974698534877,
+          0.0759700205516539
+        ],
+        "selected": true,
+        "training_rows": 21896,
+        "native_validation_mae": 4.993092904748873,
+        "test": {
+          "students": 364,
+          "rows": 2212,
+          "reference_mae": 3.0146393775772546,
+          "candidate_mae": 2.939325381739021,
+          "mae_gain": 0.07531399583823298,
+          "ci_level": 0.95,
+          "gain_interval": [
+            0.049754222346571564,
+            0.10279031955010422
+          ],
+          "native_test": {
+            "mae": 5.591119137941263,
+            "rmse": 8.776777791278215,
+            "bias": 2.448954459021813,
+            "r2": 0.485217371031581
+          },
+          "within_5": 1858,
+          "final_bands": [
+            {
+              "label": "0–49",
+              "count": 7,
+              "mae": 56.885502259778654,
+              "bias": 56.885502259778654
+            },
+            {
+              "label": "50–69",
+              "count": 321,
+              "mae": 4.5884073259262825,
+              "bias": 2.638780624375602
+            },
+            {
+              "label": "70–89",
+              "count": 1084,
+              "mae": 3.089148977791358,
+              "bias": 1.2522303996780404
+            },
+            {
+              "label": "90–100",
+              "count": 800,
+              "mae": 1.6025912313001203,
+              "bias": 0.2879521531439425
+            }
+          ],
+          "displayed_final_test": {
+            "rows": 2193,
+            "total_rows": 2212,
+            "mae": 2.8333449485210602
+          }
+        }
+      }
+    }
+  },
+  "eda": {
+    "basis": "train",
+    "histogram": [
+      {
+        "label": "0–9",
+        "count": 138
+      },
+      {
+        "label": "10–19",
+        "count": 0
+      },
+      {
+        "label": "20–29",
+        "count": 0
+      },
+      {
+        "label": "30–39",
+        "count": 0
+      },
+      {
+        "label": "40–49",
+        "count": 0
+      },
+      {
+        "label": "50–59",
+        "count": 705
+      },
+      {
+        "label": "60–69",
+        "count": 1553
+      },
+      {
+        "label": "70–79",
+        "count": 6145
+      },
+      {
+        "label": "80–89",
+        "count": 9881
+      },
+      {
+        "label": "90–100",
+        "count": 15467
+      }
+    ],
+    "target_stats": {
+      "count": 33889.0,
+      "mean": 85.1047832630057,
+      "std": 11.300895933391311,
+      "min": 0.0,
+      "25%": 79.0,
+      "50%": 88.0,
+      "75%": 93.0,
+      "max": 100.0
+    },
+    "correlations_with_final": {
+      "r1": 0.7422553476268893,
+      "r2": 0.7703521686154604,
+      "exam": 0.897427524328131
+    },
+    "below_50": {
+      "train": 138,
+      "validation": 3,
+      "test": 7
+    },
+    "midterms_vs_rating": {
+      "rows": 33889,
+      "within_one_point": 19890,
+      "fraction_within_one_point": 0.5869161084717756,
+      "mean_absolute_difference": 1.924513411431438
     }
   }
 }

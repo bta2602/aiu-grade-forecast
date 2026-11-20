@@ -1,6 +1,7 @@
 """Streamlit interface for the AIU grade forecasting project."""
 
 import json
+from hashlib import sha256
 from html import escape
 from pathlib import Path
 
@@ -8,6 +9,10 @@ import pandas as pd
 import streamlit as st
 
 from grade_forecast.model import DEFAULT_ARTIFACTS, load_bundle, predict
+from grade_forecast.uploads import (
+    ALIASES, excel_sheets, guess_columns, rating_forecasts, read_grade_file,
+    results_csv, sample_file, single_transcript_columns, transcript_history, weekly_forecasts,
+)
 
 
 ARTIFACTS = Path(DEFAULT_ARTIFACTS)
@@ -57,13 +62,18 @@ def forecast_page(bundle, report):
         r2 = None
         if stage == "late":
             r2 = st.number_input("Рейтинг за второй период (Р2)", 0.0, 100.0, 80.0, 0.5, format="%.2f")
+        history = None
+        if stage in bundle.get("history_stages", {}):
+            history = st.number_input(
+                "Средний балл прошлых семестров", 0.0, 100.0, value=None, step=0.5, format="%.2f",
+                placeholder="По желанию",
+                help="Обычное среднее итогов завершённых дисциплин за все предыдущие семестры по шкале 0–100. Текущий семестр пропусти.",
+            )
 
     # The prediction code accepts only the inputs available at the selected date.
-    prediction = predict(bundle, r1, r2)
+    prediction = predict(bundle, r1, r2, **({"prior_average": history} if history is not None else {}))
     method = prediction["model"]
     stage_report = report["stages"][stage]
-    winner_metrics = next(row for row in stage_report["models"] if row["name"] == method)
-    error = winner_metrics["test"]["mae"]
     with result:
         if prediction["status"] == "estimated":
             note = (
@@ -84,8 +94,13 @@ def forecast_page(bundle, report):
                 "Ожидаемый балл ниже порога 50. По правилам AIU при FX/F итог по формуле не выставляется.",
                 "/ 100",
             )
-        target = "итоговой оценки" if stage == "early" else "экзамена"
-        st.caption(f"{MODEL_NAMES.get(method, method)} · Средняя ошибка прогноза {target} на открытом тесте — {decimal(error, 2)} балла.")
+        if prediction.get("history_used"):
+            history_metrics = report["extensions"][stage]["history"]["test"]
+            st.caption(f"Учтён средний итог прошлых семестров. Средняя ошибка итоговой оценки на открытом тесте — {decimal(history_metrics['candidate_mae'], 2)} балла.")
+        else:
+            winner_metrics = next(row for row in stage_report["models"] if row["name"] == method)
+            error = winner_metrics.get("final_test", winner_metrics["test"])["mae"]
+            st.caption(f"{MODEL_NAMES.get(method, method)} · Средняя ошибка итоговой оценки на открытом тесте — {decimal(error, 2)} балла.")
 
     details = prediction.get("explanation")
     if details:
@@ -94,7 +109,8 @@ def forecast_page(bundle, report):
             st.write(f"Модель начинает с базового прогноза {target}. Вклады рейтингов показывают, на сколько баллов каждый из них меняет оценку для введённых значений.")
             terms = [{"Слагаемое": "Базовый прогноз", "Баллы": float(details["base"])}]
             for name, value in details["contributions"].items():
-                terms.append({"Слагаемое": {"r1": "Вклад Р1", "r2": "Вклад Р2"}.get(name, name), "Баллы": float(value)})
+                terms.append({"Слагаемое": {"r1": "Вклад Р1", "r2": "Вклад Р2",
+                                           "prior_average": "Вклад среднего прошлых семестров"}.get(name, name), "Баллы": float(value)})
             terms.append({"Слагаемое": "Сумма до ограничения шкалы", "Баллы": float(details["raw_prediction"])})
             st.dataframe(pd.DataFrame(terms), hide_index=True, width="stretch",
                          column_config={"Баллы": st.column_config.NumberColumn(format="%.2f")})
@@ -102,6 +118,96 @@ def forecast_page(bundle, report):
                 st.markdown("При допуске и успешной сдаче экзамена AIU рассчитывает итог по формуле "
                             "**0,30 × Р1 + 0,30 × Р2 + 0,40 × экзамен**.")
                 st.markdown("[Академическая политика AIU](https://aiu.kz/students/documents/academic-policy?lang=ru)")
+
+
+def upload_page(bundle, weekly_available):
+    choices = ["Рейтинги периодов", "Недельные оценки"] if weekly_available else ["Рейтинги периодов"]
+    mode = st.radio("Какие оценки у тебя есть?", choices, horizontal=True, key="upload_mode")
+    weekly = mode == "Недельные оценки"
+    history = bool(bundle.get("history_stages")) and not weekly
+    if weekly:
+        st.write("Одна строка — одна неделя по дисциплине. Можно загрузить сразу несколько дисциплин.")
+        horizon = st.radio("Прогноз по неделям до", [3, 7, 15], horizontal=True, key="upload_horizon",
+                           help="Прогноз использует отметки до выбранной недели включительно.")
+        st.caption("«н» даёт 0, «н.п.» исключает занятие из среднего. Балл за РК1 внеси в строку 7-й недели, за РК2 — в строку 15-й. Недельная модель обучена на 33 студентах курса Java.")
+    else:
+        st.write("Одна строка — одна дисциплина. Для первого прогноза достаточно Р1. Если заполнен Р2, появятся прогноз экзамена и ожидаемый итог.")
+        st.caption("Р1 и Р2 — рейтинги всего периода в Platonus. РК1 и РК2 — оценки за отдельные рубежные работы.")
+
+    demo = sample_file(weekly, history)
+    template, example = st.columns([1, 2])
+    with template:
+        st.download_button("Скачать шаблон CSV", demo, "weekly_grades.csv" if weekly else "period_grades.csv",
+                           "text/csv", icon=":material/download:", key=f"template_{weekly}", on_click="ignore")
+    with example:
+        use_demo = st.toggle("Показать пример с вымышленными оценками", key=f"demo_{weekly}")
+    uploaded = st.file_uploader("Загрузи ведомость", type=["csv", "xlsx"], key=f"upload_{weekly}",
+                                help="CSV в UTF-8 или Windows-1251, Excel XLSX. До 5 МБ и 5 000 строк. Оценки обрабатываются в памяти текущего приложения.")
+    if uploaded is None and not use_demo:
+        return
+    try:
+        if uploaded is None:
+            name, payload = "example.csv", demo
+            st.caption("Сейчас показаны вымышленные данные из шаблона.")
+        else:
+            name, payload = uploaded.name, uploaded.getvalue()
+        sheet = None
+        if name.lower().endswith(".xlsx"):
+            sheets = excel_sheets(payload)
+            sheet = st.selectbox("Лист книги", sheets) if len(sheets) > 1 else sheets[0]
+        frame = read_grade_file(name, payload, sheet)
+        fields = ["course", "week", "lecture", "lab", "self_work", "mc1", "mc2"] if weekly else ["course", "r1", "r2"]
+        if history:
+            fields.append("prior_average")
+        mapping = guess_columns(frame, fields)
+        has_required = (mapping["course"] and mapping["week"] and any(mapping[k] for k in ("lecture", "lab", "self_work"))) if weekly else mapping["r1"]
+        with st.expander("Соответствие столбцов", expanded=not has_required):
+            st.caption("Проверь назначение столбцов. Остальные поля файла пропускаются.")
+            options = [None, *frame.columns]
+            columns = st.columns(3)
+            for index, field in enumerate(fields):
+                mapping[field] = columns[index % 3].selectbox(
+                    ALIASES[field][0], options, index=options.index(mapping[field]),
+                    format_func=lambda value: value if value is not None else "Пропустить",
+                    key=f"map_{weekly}_{name}_{sheet}_{field}_{tuple(frame.columns)}",
+                )
+            chosen = [m for m in mapping.values() if m is not None]
+            if len(chosen) != len(set(chosen)):
+                raise ValueError("Каждому назначению нужен отдельный столбец.")
+        if weekly:
+            results = weekly_forecasts(frame, mapping, read_report("weekly.json"), horizon)
+        else:
+            derived = None
+            if history and single_transcript_columns(frame):
+                derive = st.checkbox("Рассчитать средний балл из этой ведомости одного студента",
+                                     key=f"derive_transcript_{sha256(payload).hexdigest()[:16]}_{sheet}",
+                                     help="Включи, если весь файл относится к одному студенту и номера семестров сквозные. Учтутся числовые итоги дисциплин со статусом completed или «завершена» из строго предыдущих семестров, даже если у них пустые Р1 и Р2. Явно введённый средний балл имеет приоритет в своей строке.")
+                if derive:
+                    derived = transcript_history(frame)
+            status_column = guess_columns(frame, ["status"])["status"]
+            if status_column:
+                ongoing = frame[status_column].astype(str).str.strip().str.casefold().isin(
+                    ["in_progress", "в процессе", "изучается"]
+                )
+                if ongoing.any() and (~ongoing).any() and st.checkbox(
+                    "Показать только текущие дисциплины", value=True,
+                    key=f"current_courses_{sha256(payload).hexdigest()[:16]}_{sheet}",
+                ):
+                    frame = frame.loc[ongoing]
+            results = rating_forecasts(frame, mapping, bundle, derived_history=derived)
+    except ValueError as exc:
+        st.warning(str(exc))
+        return
+
+    st.subheader("Прогноз по дисциплинам")
+    ready = results["Итог"].notna().sum()
+    st.caption(f"Числовой итог получен в {ready} из {len(results)} случаев. Строки с пропусками или ограничениями отмечены в столбце «Статус».")
+    st.dataframe(results, hide_index=True, width="stretch", column_config={
+        "Итог": st.column_config.NumberColumn("Прогноз итога", format="%.1f"),
+        "Экзамен": st.column_config.NumberColumn("Прогноз экзамена", format="%.1f"),
+    })
+    st.download_button("Скачать результаты CSV", results_csv(results), "grade_forecasts.csv", "text/csv",
+                       type="primary", icon=":material/download:", key=f"export_{weekly}", on_click="ignore")
 
 
 def model_evaluation(report):
@@ -127,6 +233,11 @@ def model_evaluation(report):
     st.dataframe(pd.DataFrame(comparison), hide_index=True, width="stretch", column_config=config)
     st.caption(f"Выбранная модель — {MODEL_NAMES.get(info['winner'], info['winner'])}. "
                "MAE — средняя абсолютная ошибка. RMSE сильнее учитывает большие промахи.")
+    history = report.get("extensions", {}).get(stage, {}).get("history", {}).get("test")
+    if history and history.get("candidate_mae") is not None:
+        st.write(f"На {history['rows']} записях с доступной историей средняя ошибка итоговой оценки "
+                 f"составила **{decimal(history['candidate_mae'], 2)} балла** с учётом прошлых семестров "
+                 f"и **{decimal(history['reference_mae'], 2)}** по одним рейтингам.")
     if stage == "late":
         st.caption("MAE итога по формуле рассчитана на всём открытом тесте. В кабинете AIU выставление итога зависит от допуска и сдачи экзамена.")
         shown = info.get("displayed_final_test")
@@ -324,6 +435,10 @@ st.markdown("""
 <style>
 .block-container {max-width: 1080px; padding-top: 2.5rem; padding-bottom: 3.5rem;}
 h1,h2,h3 {font-family: 'Source Sans 3','Segoe UI',sans-serif; letter-spacing:-.025em;}
+[data-testid="stFileUploaderDropzone"] {border:1.5px dashed #4f827b; border-radius:14px; padding:1.1rem;}
+.st-key-section_nav [role="radiogroup"] {gap:.45rem; padding:.25rem 0 .7rem; flex-wrap:wrap;}
+.st-key-section_nav label {border:1px solid #8ba9a5; border-radius:24px; padding:.25rem .8rem .25rem .5rem;}
+.st-key-section_nav label:has(input:checked) {border-color:#167568; background:rgba(39,160,135,.13);}
 .forecast-card {border:1px solid #19524e; background:#143f3c; color:#f4fcf9;
   border-radius:16px; padding:1.45rem 1.6rem; margin:.2rem 0 .55rem;}
 .forecast-label {font-size:1.02rem; font-weight:600; color:#f1faf7;}
@@ -335,7 +450,7 @@ h1,h2,h3 {font-family: 'Source Sans 3','Segoe UI',sans-serif; letter-spacing:-.0
 </style>
 """, unsafe_allow_html=True)
 st.title("Прогноз итоговой оценки")
-st.caption("Машинное обучение · 15-недельный семестр AIU")
+st.caption("Astana International University · 15 учебных недель · 100-балльная шкала")
 bundle_file = ARTIFACTS / "forecast.json"
 if not bundle_file.is_file() or not (ARTIFACTS / "public_metrics.json").is_file():
     st.info("Для первого запуска подготовь данные и обучи модели по инструкции в README проекта.")
@@ -343,11 +458,13 @@ if not bundle_file.is_file() or not (ARTIFACTS / "public_metrics.json").is_file(
 bundle = cached_bundle(bundle_file.stat().st_mtime_ns)
 report = read_report("public_metrics.json")
 weekly_available = (ARTIFACTS / "weekly.json").is_file()
-tabs = st.tabs(["Прогноз", "Проверка модели"] + (["Недельные оценки"] if weekly_available else []))
-with tabs[0]:
+sections = ["Загрузить оценки", "Ручной ввод"] + (["Недельный журнал"] if weekly_available else []) + ["Точность модели"]
+section = st.radio("Раздел", sections, key="section_nav", horizontal=True, label_visibility="collapsed")
+if section == "Загрузить оценки":
+    upload_page(bundle, weekly_available)
+elif section == "Ручной ввод":
     forecast_page(bundle, report)
-with tabs[1]:
+elif section == "Точность модели":
     model_evaluation(report)
-if weekly_available:
-    with tabs[2]:
-        weekly_evaluation()
+elif section == "Недельный журнал":
+    weekly_evaluation()

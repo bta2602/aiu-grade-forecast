@@ -2,6 +2,9 @@
 
 import unittest
 
+import pandas as pd
+
+from grade_forecast.history import previous_average
 from grade_forecast.model import formula_grade, load_bundle, predict
 
 
@@ -54,6 +57,43 @@ class ForecastTests(unittest.TestCase):
                     predict(self.bundle, invalid)
                 with self.assertRaises(ValueError):
                     predict(self.bundle, 70, invalid)
+                with self.assertRaises(ValueError):
+                    predict(self.bundle, 70, prior_average=invalid)
+
+    def test_history_contains_only_the_students_own_earlier_courses(self):
+        frame = pd.DataFrame(
+            [(1, 3, 99), (1, 1, 50), (2, 1, 100), (1, 2, 80),
+             (1, 1, 70), (2, 2, 60), (1, 3, 11)],
+            columns=["student", "semester", "final"],
+        )
+        prior = previous_average(frame)
+        self.assertTrue(prior.loc[[1, 2, 4]].isna().all())
+        self.assertEqual(prior[3], 60)
+        self.assertEqual(prior[5], 100)
+        for index in (0, 6):
+            self.assertAlmostEqual(prior[index], 200 / 3)
+
+    def test_optional_history_and_contributions(self):
+        for second in (None, 80):
+            reference = predict(self.bundle, 70, second)
+            result = predict(self.bundle, 70, second, prior_average=85)
+            self.assertFalse(reference["history_used"])
+            self.assertTrue(result["history_used"])
+            explain = result["explanation"]
+            self.assertIn("prior_average", explain["contributions"])
+            self.assertAlmostEqual(explain["base"] + sum(explain["contributions"].values()),
+                                   explain["raw_prediction"], places=5)
+            without_history = {"stages": self.bundle["stages"]}
+            self.assertEqual(predict(without_history, 70, second, prior_average=85), reference)
+
+    def test_historical_average_does_not_change_formal_admission(self):
+        fixed = {"name": "linear", "weights": [0, 0, 0], "intercept": 75, "center": [0, 0, 0]}
+        bundle = {"history_stages": {"late": fixed}}
+        low = predict(bundle, 40, 59, prior_average=100)
+        self.assertEqual(low["status"], "rating_below_50")
+        eligible = predict(bundle, 40, 60, prior_average=0)
+        self.assertEqual(eligible["status"], "estimated")
+        self.assertEqual(eligible["final_grade"], formula_grade(40, 60, 75))
 
 
 if __name__ == "__main__":

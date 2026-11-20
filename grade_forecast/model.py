@@ -15,11 +15,14 @@ FEATURES = {"early": ["r1"], "late": ["r1", "r2"]}
 
 def load_bundle(path=DEFAULT_ARTIFACTS):
     """Read one self-contained model file, without deserializing Python objects."""
-    with (Path(path) / "forecast.json").open(encoding="utf-8") as stream:
-        bundle = json.load(stream)
+    return decode_bundle((Path(path) / "forecast.json").read_bytes())
+
+
+def decode_bundle(content: bytes):
+    bundle = json.loads(content)
     if bundle["version"] != 1:
         raise ValueError("Неподдерживаемая версия обученной модели")
-    for model in bundle["stages"].values():
+    for model in (*bundle["stages"].values(), *bundle.get("history_stages", {}).values()):
         if model["name"] == "catboost":
             model["estimator"] = CatBoostRegressor().load_model(blob=base64.b64decode(model.pop("cbm")))
     return bundle
@@ -48,7 +51,7 @@ def _validate_grade(value):
     return grade
 
 
-def predict(bundle, r1, r2=None):
+def predict(bundle, r1, r2=None, *, prior_average=None):
     """Forecast with the same feature order and clipping used for evaluation.
 
     Contributions add to the raw model output. Scores displayed to users are
@@ -59,8 +62,14 @@ def predict(bundle, r1, r2=None):
     values = [_validate_grade(r1)]
     if r2 is not None:
         values.append(_validate_grade(r2))
+    history_used = prior_average is not None and stage in bundle.get("history_stages", {})
+    if prior_average is not None:
+        prior_average = _validate_grade(prior_average)
+    if history_used:
+        names = [*names, "prior_average"]
+        values.append(prior_average)
     x = np.array([values], dtype=float)
-    model = bundle["stages"][stage]
+    model = bundle["history_stages" if history_used else "stages"][stage]
     raw = float(score_matrix(model, x)[0])
     estimate = float(np.clip(raw, 0, 100))
     if model["name"] == "catboost":
@@ -77,14 +86,14 @@ def predict(bundle, r1, r2=None):
     status = "estimated"
     if stage == "late":
         exam = estimate
-        formula = float(formula_grade(*values, exam))
-        if np.mean(values) < 50:
+        formula = float(formula_grade(values[0], values[1], exam))
+        if np.mean(values[:2]) < 50:
             status = "rating_below_50"
         elif exam < 50:
             status = "exam_below_50"
         final = formula if status == "estimated" else None
     return {
-        "stage": stage, "model": model["name"], "status": status,
+        "stage": stage, "model": model["name"], "status": status, "history_used": history_used,
         "final_grade": final, "exam_score": exam, "formula_grade": formula,
         "explanation": {
             "target": "final_grade" if stage == "early" else "exam_score",

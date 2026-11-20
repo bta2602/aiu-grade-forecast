@@ -5,4 +5,5 @@ __pycache__/
 catboost_info/
 datasets/public_kz/
 datasets/aiu_platonus/
+datasets/external/
 .streamlit/secrets.toml

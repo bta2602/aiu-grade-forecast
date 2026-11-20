@@ -258,10 +258,15 @@ def private_ablation(data, counts, stage):
 
 
 def private_report(directory, artifact_dir):
+    from grade_forecast.history import previous_average
     from grade_forecast.model import load_bundle, predict
 
     courses = pd.read_csv(directory / "courses.csv")
-    data = courses.loc[courses["status"].eq("completed")].dropna(
+    completed = courses.loc[courses["status"].eq("completed")].copy()
+    completed["prior_average"] = previous_average(
+        completed.assign(student=0), final="final_grade"
+    )
+    data = completed.dropna(
         subset=["rk1", "rk2", "r1", "r2", "exam_score", "final_grade"]
     )
     if data.empty:
@@ -294,6 +299,21 @@ def private_report(directory, artifact_dir):
             "baseline_final_grade": error_metrics(target[np.isfinite(scores)], baseline[np.isfinite(scores)]),
             "statuses": pd.Series([p["status"] for p in predictions]).value_counts().to_dict(),
         }
+        if stage in bundle.get("history_stages", {}):
+            past = data.prior_average.notna().to_numpy()
+            with_history = np.asarray([
+                predict(bundle, row.r1, row.r2 if stage == "late" else None,
+                        prior_average=row.prior_average)["final_grade"]
+                for row in data.loc[past].itertuples(index=False)
+            ], dtype=float)
+            without_history = scores[past]
+            paired = np.isfinite(with_history) & np.isfinite(without_history)
+            actual = target[past][paired]
+            stage_report["prior_semesters"] = {
+                "courses_with_history": int(past.sum()),
+                "with_history": error_metrics(actual, with_history[paired]),
+                "without_history_same_courses": error_metrics(actual, without_history[paired]),
+            }
         if stage == "late":
             stage_report["exam_score"] = error_metrics(data["exam_score"], [p["exam_score"] for p in predictions])
             stage_report["exam_baseline_mean_rating"] = error_metrics(data["exam_score"], baseline)

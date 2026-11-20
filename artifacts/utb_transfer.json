@@ -1,0 +1,55 @@
+{
+  "source": "https://doi.org/10.5281/zenodo.22308083",
+  "scale_multiplier": 20,
+  "rows_by_outcome": {
+    "graded": 273,
+    "withdrew_after_1": 91,
+    "withdrew_after_2": 58
+  },
+  "stages": {
+    "early": {
+      "displayed": 273,
+      "eligible": 273,
+      "model": {
+        "n": 273,
+        "mae": 7.7415,
+        "rmse": 11.7517,
+        "bias": 5.6652
+      },
+      "baseline_on_displayed": {
+        "n": 273,
+        "mae": 8.8476,
+        "rmse": 11.3988,
+        "bias": -4.0623
+      }
+    },
+    "late": {
+      "displayed": 238,
+      "eligible": 273,
+      "model": {
+        "n": 238,
+        "mae": 3.4406,
+        "rmse": 4.3955,
+        "bias": 1.7574
+      },
+      "baseline_on_displayed": {
+        "n": 238,
+        "mae": 3.8954,
+        "rmse": 4.9613,
+        "bias": -0.955
+      },
+      "formula_all_graded": {
+        "n": 273,
+        "mae": 4.1772,
+        "rmse": 5.9244,
+        "bias": 2.4796
+      },
+      "baseline_all_graded": {
+        "n": 273,
+        "mae": 4.219,
+        "rmse": 5.3515,
+        "bias": -1.1429
+      }
+    }
+  }
+}
